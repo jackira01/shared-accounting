@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  color        String   @default("#2563eb")
+  isDemo       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  memberships         GroupMember[]
+  lineAllocations     LineAllocation[]
+  incomeAllocations   IncomeAllocation[]
+  paidInvoices        Invoice[]      @relation("InvoicePaidBy")
+  createdInvoices     Invoice[]      @relation("InvoiceCreatedBy")
+  receivedIncomes     Income[]       @relation("IncomeReceivedBy")
+  createdIncomes      Income[]       @relation("IncomeCreatedBy")
+  settlementsSent     Settlement[]   @relation("SettlementFrom")
+  settlementsReceived Settlement[]   @relation("SettlementTo")
+}
+
+model Group {
+  id        String   @id @default(cuid())
+  name      String
+  currency  String   @default("COP")
+  configured Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  members     GroupMember[]
+  categories  Category[]
+  invoices    Invoice[]
+  incomes     Income[]
+  settlements Settlement[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  role     String   @default("member")
+  status   String   @default("ACTIVE")
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  groupId   String
+  name      String
+  color     String   @default("#6b7280")
+  type      String   @default("EXPENSE")
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  group   Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  lines   InvoiceLine[]
+  incomes Income[]
+
+  @@index([groupId])
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  groupId     String
+  date        DateTime
+  vendor      String?
+  notes       String?
+  isDemo      Boolean  @default(false)
+  paidById    String
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  group     Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy    User          @relation("InvoicePaidBy", fields: [paidById], references: [id])
+  createdBy User          @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  lines     InvoiceLine[]
+
+  @@index([groupId, date])
+}
+
+model InvoiceLine {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  description String
+  detail      String?
+  weight      String?
+  quantity    Int     @default(1)
+  unitPrice   Int
+  categoryId  String?
+  sortOrder   Int     @default(0)
+
+  invoice     Invoice           @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  category    Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  allocations LineAllocation[]
+}
+
+model LineAllocation {
+  id         String @id @default(cuid())
+  lineId     String
+  userId     String
+  percentage Float
+
+  line InvoiceLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lineId, userId])
+}
+
+model Income {
+  id           String   @id @default(cuid())
+  groupId      String
+  date         DateTime
+  description  String
+  amount       Int
+  isDemo       Boolean  @default(false)
+  receivedById String
+  createdById  String
+  categoryId   String?
+  createdAt    DateTime @default(now())
+
+  group       Group              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  receivedBy  User               @relation("IncomeReceivedBy", fields: [receivedById], references: [id])
+  createdBy   User               @relation("IncomeCreatedBy", fields: [createdById], references: [id])
+  category    Category?          @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  allocations IncomeAllocation[]
+
+  @@index([groupId, date])
+}
+
+model IncomeAllocation {
+  id         String @id @default(cuid())
+  incomeId   String
+  userId     String
+  percentage Float
+
+  income Income @relation(fields: [incomeId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([incomeId, userId])
+}
+
+model Settlement {
+  id         String   @id @default(cuid())
+  groupId    String
+  fromUserId String
+  toUserId   String
+  amount     Int
+  date       DateTime
+  note       String?
+  createdAt  DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  from  User  @relation("SettlementFrom", fields: [fromUserId], references: [id])
+  to    User  @relation("SettlementTo", fields: [toUserId], references: [id])
+
+  @@index([groupId, date])
+}
