@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Contabilidad — Gastos compartidos sin hojas de cálculo
 
-## Getting Started
+Contabilidad es una app web para parejas, roommates o familias que comparten gastos. Registras facturas con sus productos, marcas quién pagó y cómo se divide cada gasto (50/50, 100 % o porcentajes a medida), y la app calcula al instante cuánto gastó cada uno, quién le debe a quién y qué pagos hacen falta para quedar en paz. Sustituye la hoja de cálculo: solo anota facturas e ingresos y deja que el sistema haga las cuentas y muestre los saldos por mes.
 
-First, run the development server:
+> **Código abierto.** Este proyecto es de código abierto. Su venta, comercialización o redistribución con fines de lucro **no está autorizada** sin el consentimiento expreso y por escrito de sus autores.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Quick path
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Prerrequisitos: Node.js 20+ y npm (para Docker solo hace falta Docker + Docker Compose).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Local (desarrollo)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Instala dependencias:
+   ```bash
+   npm install
+   ```
+2. Crea `.env` con las variables requeridas:
+   ```env
+   DATABASE_URL="file:./dev.db"
+   SESSION_SECRET="una-clave-secreta-larga-y-aleatoria"
+   REQUIRE_LOGIN="true"
+   ```
+3. Crea la base de datos:
+   ```bash
+   npm run db:migrate
+   ```
+4. (Opcional) Carga datos de ejemplo para explorar la app:
+   ```bash
+   npm run db:seed
+   ```
+5. Arranca el servidor:
+   ```bash
+   npm run dev
+   ```
+   Abre http://localhost:3000.
 
-## Learn More
+### Primer uso
 
-To learn more about Next.js, take a look at the following resources:
+1. Abre **/registro** y crea la primera cuenta: **el primer usuario se convierte en administrador**.
+2. Completa la **configuración inicial**: elige la moneda y personaliza las categorías (o pulsa "Configurar más tarde" para usar las categorías por defecto).
+3. Invita a los demás: cada uno se registra y queda **pendiente de aprobación** hasta que el admin los apruebe en el panel **Admin**.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Servidor (Docker + Caddy)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Configura las variables de entorno y el dominio:
+   ```env
+   # en el entorno de despliegue o un archivo .env
+   SESSION_SECRET="una-clave-secreta-larga-y-aleatoria"
+   REQUIRE_LOGIN="true"
+   ```
+   En `Caddyfile` reemplaza `localhost` por tu dominio.
+2. Levanta los servicios:
+   ```bash
+   docker-compose up -d --build
+   ```
+   La app corre en `:3000` (red interna) y Caddy expone `:80`/`:443` con HTTPS. La base SQLite se guarda en el volumen `prisma_data`.
+3. Respaldos: ejecuta `./backup.sh` (o prográmalo en cron) para copiar `prisma/dev.db` a `./backups/`.
 
-## Deploy on Vercel
+### Configuración
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Variable | Descripción |
+|----------|-------------|
+| `DATABASE_URL` | Ruta de la base SQLite (`file:./dev.db`). |
+| `SESSION_SECRET` | **Requerida.** Clave para firmar las sesiones (JWT). |
+| `REQUIRE_LOGIN` | `true` activa registro/login y autorización; `false` usa el admin por defecto sin login. |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Registro, login y autorización
+
+- **Registro:** el primer usuario registrado crea el grupo y es **admin**. Los usuarios posteriores se registran en `/registro` y quedan **pendientes**.
+- **Login:** email + contraseña (bcrypt). Los intentos fallidos se limitan (bloqueo temporal).
+- **Aprobación:** un usuario pendiente solo ve el aviso *"Pide acceso al administrador"*. El admin los aprueba o rechaza (rechazar elimina la cuenta) en `/admin`.
+- **Categorías:** solo el admin puede crear, editar o eliminar categorías.
+- **Datos de ejemplo:** si se usó `npm run db:seed`, el admin ve un **banner** indicando que hay datos de ejemplo y un botón para borrarlos; el banner desaparece al borrarlos.
+
+## Details
+
+| Área | Decisión |
+|------|----------|
+| Framework | Next.js 16 (App Router, Server Actions, TypeScript) |
+| Base de datos | SQLite + Prisma ORM v6 |
+| Estilos | Tailwind CSS v4 |
+| Autenticación | Manual: `bcryptjs` (hash) + `jose` (JWT en cookie `httpOnly`) |
+| Autorización | Estado en `GroupMember` (`ACTIVE`/`PENDING`) + rol (`admin`/`member`) |
+| Moneda | Lista fija (COP, USD, EUR, MXN, ARS, CLP, PEN, BRL) por grupo en `Group.currency` |
+| Configuración inicial | `Group.configured`; wizard en `/setup` (moneda + categorías) |
+| Datos de ejemplo | Flags `isDemo` en usuarios/facturas/ingresos + banner con borrado |
+| Validación | Zod (schemas en `src/lib/validators.ts`) |
+| Cálculos financieros | `src/lib/calculations/` (reparto, saldos, liquidaciones) con tests en Vitest |
+| Búsqueda de productos | Server Action con debounce y similitud por nombre (`src/lib/search.ts`) |
+| Despliegue | Docker multi-stage (output `standalone`) + Caddy como proxy inverso |
+| Respaldos | `backup.sh` copia SQLite y rota los últimos 7 |
+
+## Checklist
+
+- [ ] `npm install` finaliza sin errores.
+- [ ] `.env` existe con `DATABASE_URL`, `SESSION_SECRET` y `REQUIRE_LOGIN`.
+- [ ] `npm run db:migrate` crea `prisma/dev.db` sin errores.
+- [ ] `npm test` pasa todas las pruebas.
+- [ ] `npm run dev` abre http://localhost:3000.
+- [ ] Puedes registrarte como primer usuario, ver el wizard de configuración y entrar al panel.
+- [ ] Un segundo usuario se registra, queda pendiente, y el admin puede aprobarlo/rechazarlo.
+- [ ] (Producción) `npm run build` compila sin errores antes de `docker-compose up -d`.
+
+## Next steps
+
+- **Datos iniciales:** ajusta `prisma/seed.ts` para tu propio ejemplo; marca `isDemo` los registros de ejemplo.
+- **Dominio y HTTPS:** edita `Caddyfile` y reemplaza `localhost` por tu dominio real.
+- **Moneda:** amplía la lista en `src/lib/format.ts` (`CURRENCIES`) si necesitas otra divisa.
+- **Contribuir:** sigue el estilo del repo, agrega pruebas en Vitest y ejecuta `npm run lint` y `npm test` antes de abrir un PR. La arquitectura general está descrita en `AGENTS.md`.
+- **Seguridad:** en producción usa un `SESSION_SECRET` aleatorio y activa `REQUIRE_LOGIN=true`.
