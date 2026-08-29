@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - prisma_data:/app/prisma
+    environment:
+      - DATABASE_URL=file:./dev.db
+      - SESSION_SECRET=${SESSION_SECRET:-super-secret-session-key-change-in-production}
+      - REQUIRE_LOGIN=${REQUIRE_LOGIN:-false}
+    networks:
+      - app-net
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks:
+      - app-net
+
+volumes:
+  prisma_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  app-net:
+    driver: bridge
