@@ -47,13 +47,14 @@ Prerrequisitos: Node.js 20+ y npm (para Docker solo hace falta Docker + Docker C
    # en el entorno de despliegue o un archivo .env
    SESSION_SECRET="una-clave-secreta-larga-y-aleatoria"
    REQUIRE_LOGIN="true"
+   PORT="3000"
    ```
    En `Caddyfile` reemplaza `localhost` por tu dominio.
 2. Levanta los servicios:
    ```bash
    docker-compose up -d --build
    ```
-   La app corre en `:3000` (red interna) y Caddy expone `:80`/`:443` con HTTPS. La base SQLite se guarda en el volumen `prisma_data`.
+   La app corre en el puerto definido por `PORT` (por defecto `3000`) y Caddy expone `:80`/`:443` con HTTPS. La base SQLite se guarda en el volumen `prisma_data`.
 3. Respaldos: ejecuta `./backup.sh` (o prográmalo en cron) para copiar `prisma/dev.db` a `./backups/`.
 
 ### Configuración
@@ -63,6 +64,7 @@ Prerrequisitos: Node.js 20+ y npm (para Docker solo hace falta Docker + Docker C
 | `DATABASE_URL` | Ruta de la base SQLite (`file:./dev.db`). |
 | `SESSION_SECRET` | **Requerida.** Clave para firmar las sesiones (JWT). |
 | `REQUIRE_LOGIN` | `true` activa registro/login y autorización; `false` usa el admin por defecto sin login. |
+| `PORT` | Puerto en el que escucha la app (por defecto `3000`). Afecta al contenedor, al mapeo de `docker-compose` y al proxy de Caddy. |
 
 ## Registro, login y autorización
 
