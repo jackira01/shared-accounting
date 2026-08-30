@@ -1,12 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { exportData, importData } from "@/app/actions/backup";
 import { Button, Card, Label } from "@/components/ui";
 
 export function BackupPanel() {
-  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(
     null
@@ -55,14 +53,12 @@ export function BackupPanel() {
     const result = await importData(formData);
     setBusy(false);
 
-    if (!result.ok) {
+    if (result && !result.ok) {
       setMessage({ ok: false, text: result.error ?? "Ocurrió un error" });
       return;
     }
 
-    setMessage({ ok: true, text: "Datos restaurados correctamente" });
-    if (fileRef.current) fileRef.current.value = "";
-    router.refresh();
+    // Éxito: la acción invalida la sesión y redirige a /login (o /registro).
   }
 
   return (

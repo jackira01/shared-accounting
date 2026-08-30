@@ -1,7 +1,10 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/dal";
+import { deleteSession } from "@/lib/session";
 import { exportAllData, restoreData } from "@/lib/backup";
 import { backupSchema } from "@/lib/backup-schema";
 
@@ -52,5 +55,11 @@ export async function importData(formData: FormData): Promise<ActionResult> {
   revalidatePath("/facturas");
   revalidatePath("/ingresos");
   revalidatePath("/configuracion");
-  return { ok: true };
+
+  // Invalida la sesión actual: los IDs de la base restaurada pueden no
+  // coincidir con los de la sesión previa.
+  await deleteSession();
+
+  const hasUsers = (await prisma.user.count()) > 0;
+  redirect(hasUsers ? "/login?restored=1" : "/registro?restored=1");
 }
