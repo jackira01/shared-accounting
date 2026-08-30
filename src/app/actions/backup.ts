@@ -4,22 +4,19 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/dal";
+import { hasAnyUsers } from "@/lib/data";
 import { deleteSession } from "@/lib/session";
 import { exportAllData, restoreData } from "@/lib/backup";
-import { backupSchema } from "@/lib/backup-schema";
+import { backupSchema, type BackupDataInput } from "@/lib/backup-schema";
 
 type ActionResult = { ok: boolean; error?: string };
 type ExportResult = { ok: boolean; data?: string; error?: string };
 
-export async function exportData(): Promise<ExportResult> {
-  await requireAdmin();
-  const data = await exportAllData();
-  return { ok: true, data: JSON.stringify(data, null, 2) };
-}
+type ParsedFile =
+  | { ok: true; data: BackupDataInput }
+  | { ok: false; error: string };
 
-export async function importData(formData: FormData): Promise<ActionResult> {
-  await requireAdmin();
-
+async function parseBackupFile(formData: FormData): Promise<ParsedFile> {
   const file = formData.get("file");
   if (!(file instanceof File)) {
     return { ok: false, error: "No se recibió ningún archivo" };
@@ -47,8 +44,10 @@ export async function importData(formData: FormData): Promise<ActionResult> {
     };
   }
 
-  await restoreData(parsed.data);
+  return { ok: true, data: parsed.data };
+}
 
+async function finishRestore(): Promise<never> {
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/saldos");
@@ -62,4 +61,39 @@ export async function importData(formData: FormData): Promise<ActionResult> {
 
   const hasUsers = (await prisma.user.count()) > 0;
   redirect(hasUsers ? "/login?restored=1" : "/registro?restored=1");
+}
+
+export async function exportData(): Promise<ExportResult> {
+  await requireAdmin();
+  const data = await exportAllData();
+  return { ok: true, data: JSON.stringify(data, null, 2) };
+}
+
+export async function importData(formData: FormData): Promise<ActionResult> {
+  await requireAdmin();
+
+  const parsed = await parseBackupFile(formData);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+
+  await restoreData(parsed.data);
+  return finishRestore();
+}
+
+/**
+ * Restaura un respaldo durante el primer arranque (sin usuarios registrados),
+ * evitando pasar por el registro y la configuración inicial.
+ */
+export async function importFirstRun(formData: FormData): Promise<ActionResult> {
+  if (await hasAnyUsers()) {
+    return {
+      ok: false,
+      error: "Ya hay datos en la aplicación. Usa el panel de administración.",
+    };
+  }
+
+  const parsed = await parseBackupFile(formData);
+  if (!parsed.ok) return { ok: false, error: parsed.error };
+
+  await restoreData(parsed.data);
+  return finishRestore();
 }
