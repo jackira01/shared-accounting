@@ -36,10 +36,22 @@ export default async function AppLayout({
     redirect("/esperando");
   }
 
-  const [user, config] = await Promise.all([
-    getCurrentUser(),
-    getGroupConfig(),
-  ]);
+  // Carga los datos del usuario/grupo de forma defensiva: si el token de
+  // sesión apunta a un usuario inexistente o sin grupo (cookie huérfana tras
+  // resetear la base), se limpia la sesión y se redirige al login.
+  const data = await (async () => {
+    try {
+      return await Promise.all([getCurrentUser(), getGroupConfig()]);
+    } catch {
+      return null;
+    }
+  })();
+
+  if (!data) {
+    return <ForceLogout />;
+  }
+
+  const [user, config] = data;
 
   if (user.mustChangePassword) {
     redirect("/cambiar-password");
