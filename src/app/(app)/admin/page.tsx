@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentMembership, getAllMemberships } from "@/lib/data";
 import { UsersManager } from "./users-manager";
+import { BackupPanel } from "./backup-panel";
 
 export default async function AdminPage() {
   const membership = await getCurrentMembership();
@@ -23,6 +24,7 @@ export default async function AdminPage() {
           status: m.status,
         }))}
       />
+      <BackupPanel />
     </div>
   );
 }
