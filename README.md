@@ -40,22 +40,35 @@ Prerrequisitos: Node.js 20+ y npm (para Docker solo hace falta Docker + Docker C
 2. Completa la **configuración inicial**: elige la moneda y personaliza las categorías (o pulsa "Configurar más tarde" para usar las categorías por defecto).
 3. Invita a los demás: cada uno se registra y queda **pendiente de aprobación** hasta que el admin los apruebe en el panel **Admin**.
 
-### Servidor (Docker + Caddy)
+### Servidor (Docker)
 
-1. Configura las variables de entorno y el dominio:
+1. Configura las variables de entorno:
    ```env
    # en el entorno de despliegue o un archivo .env
    SESSION_SECRET="una-clave-secreta-larga-y-aleatoria"
    REQUIRE_LOGIN="true"
    PORT="3000"
    ```
-   En `Caddyfile` reemplaza `localhost` por tu dominio.
-2. Levanta los servicios:
+2. Levanta el servicio:
    ```bash
    docker-compose up -d --build
    ```
-   La app corre en el puerto definido por `PORT` (por defecto `3000`) y Caddy expone `:80`/`:443` con HTTPS. La base SQLite se guarda en el volumen `prisma_data`.
-3. Respaldos: ejecuta `./backup.sh` (o prográmalo en cron) para copiar `prisma/dev.db` a `./backups/`.
+   La app escucha en el puerto `PORT` (por defecto `3000`) y las migraciones se aplican solas al arrancar. La base SQLite se guarda en el volumen `prisma_data`.
+3. Respaldos: ejecuta `./backup.sh` (o prográmalo en cron) para copiar la base a `./backups/`.
+
+### Plataformas PaaS (Dokploy, Coolify, etc.)
+
+Usa únicamente el `docker-compose.yml` principal (solo el servicio `app`). El proxy inverso y la terminación TLS los aporta la plataforma; no levantes Caddy para no chocar con los puertos `80`/`443`.
+
+### VPS con Caddy opcional
+
+Para un despliegue manual con HTTPS propio, añade el override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+Esto agrega Caddy (puertos `80`/`443`) y expone la app detrás de tu dominio. Reemplaza `localhost` en `Caddyfile`.
 
 ### Configuración
 
@@ -89,7 +102,7 @@ Prerrequisitos: Node.js 20+ y npm (para Docker solo hace falta Docker + Docker C
 | Validación | Zod (schemas en `src/lib/validators.ts`) |
 | Cálculos financieros | `src/lib/calculations/` (reparto, saldos, liquidaciones) con tests en Vitest |
 | Búsqueda de productos | Server Action con debounce y similitud por nombre (`src/lib/search.ts`) |
-| Despliegue | Docker multi-stage (output `standalone`) + Caddy como proxy inverso |
+| Despliegue | Docker multi-stage (output `standalone`) + migraciones automáticas en `entrypoint.sh`; Caddy opcional vía `docker-compose.prod.yml` |
 | Respaldos | `backup.sh` copia SQLite y rota los últimos 7 |
 
 ## Checklist
