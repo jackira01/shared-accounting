@@ -79,13 +79,37 @@ Esto agrega Caddy (puertos `80`/`443`) y expone la app detrás de tu dominio. Re
 | `REQUIRE_LOGIN` | `true` activa registro/login y autorización; `false` usa el admin por defecto sin login. |
 | `PORT` | Puerto en el que escucha la app (por defecto `3000`). Afecta al contenedor, al mapeo de `docker-compose` y al proxy de Caddy. |
 
-## Registro, login y autorización
+## Funciones
 
-- **Registro:** el primer usuario registrado crea el grupo y es **admin**. Los usuarios posteriores se registran en `/registro` y quedan **pendientes**.
-- **Login:** email + contraseña (bcrypt). Los intentos fallidos se limitan (bloqueo temporal).
-- **Aprobación:** un usuario pendiente solo ve el aviso *"Pide acceso al administrador"*. El admin los aprueba o rechaza (rechazar elimina la cuenta) en `/admin`.
-- **Categorías:** solo el admin puede crear, editar o eliminar categorías.
-- **Datos de ejemplo:** si se usó `npm run db:seed`, el admin ve un **banner** indicando que hay datos de ejemplo y un botón para borrarlos; el banner desaparece al borrarlos.
+### Autenticación y autorización
+- **Registro:** el primer usuario registrado crea el grupo y es **admin**. Los siguientes quedan **pendientes**.
+- **Login:** email + contraseña (bcrypt); bloqueo temporal tras varios intentos fallidos.
+- **Aprobación:** el admin aprueba o rechaza usuarios en `/admin` (rechazar elimina la cuenta). Un usuario pendiente solo ve *"Pide acceso al administrador"*.
+- **Configuración inicial:** al registrarse el primer admin, `/setup` permite elegir **moneda** y gestionar **categorías** (o "Configurar más tarde").
+
+### Facturas
+- Crear, editar y eliminar facturas con fecha, establecimiento y notas.
+- Líneas de producto con cantidad, precio, categoría, y descripción/peso opcionales.
+- División por defecto (50/50 o 100 %) y por línea con porcentajes a medida.
+- **Búsqueda de productos** con autocompletado (debounce) para reutilizar nombres ya registrados.
+
+### Ingresos
+- Registrar, editar y eliminar ingresos con categoría y reparto entre miembros.
+
+### Saldos y resumen
+- **Resumen (inicio):** posición, quién debe a quién, métricas del mes y por persona, actividad reciente.
+- **Saldos:** balance por usuario (personal + compartido), métricas de gastos **por mes** (selector), transferencias sugeridas y registro de pagos.
+
+### Categorías y moneda
+- **Categorías:** CRUD solo para admin (crear, editar, activar/desactivar).
+- **Moneda:** lista fija (COP, USD, EUR, MXN, ARS, CLP, PEN, BRL), configurable por el admin.
+
+### Datos de ejemplo
+- `npm run db:seed` crea usuarios y facturas de ejemplo marcados con `isDemo`; el admin ve un **banner** con un botón para borrarlos.
+
+### Respaldo y restauración (JSON)
+- En `/admin` (solo admin): **Exportar** descarga un `.json` con todas las tablas; **Importar** sube ese `.json`, valida su estructura con Zod y **reemplaza** todos los datos.
+- Útil para respaldos y migraciones entre entornos. El archivo incluye los hashes de contraseñas y los datos de ejemplo.
 
 ## Details
 
@@ -103,6 +127,7 @@ Esto agrega Caddy (puertos `80`/`443`) y expone la app detrás de tu dominio. Re
 | Cálculos financieros | `src/lib/calculations/` (reparto, saldos, liquidaciones) con tests en Vitest |
 | Búsqueda de productos | Server Action con debounce y similitud por nombre (`src/lib/search.ts`) |
 | Despliegue | Docker multi-stage (output `standalone`) + migraciones automáticas en `entrypoint.sh`; Caddy opcional vía `docker-compose.prod.yml` |
+| Respaldo/restauración | Export/import JSON desde `/admin` (`src/lib/backup.ts` + Zod + `$transaction`) |
 | Respaldos | `backup.sh` copia SQLite y rota los últimos 7 |
 
 ## Checklist
@@ -114,6 +139,7 @@ Esto agrega Caddy (puertos `80`/`443`) y expone la app detrás de tu dominio. Re
 - [ ] `npm run dev` abre http://localhost:3000.
 - [ ] Puedes registrarte como primer usuario, ver el wizard de configuración y entrar al panel.
 - [ ] Un segundo usuario se registra, queda pendiente, y el admin puede aprobarlo/rechazarlo.
+- [ ] En `/admin` puedes exportar un respaldo `.json` e importarlo de vuelta.
 - [ ] (Producción) `npm run build` compila sin errores antes de `docker-compose up -d`.
 
 ## Next steps
