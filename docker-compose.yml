@@ -5,13 +5,14 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
     volumes:
       - prisma_data:/app/prisma
     environment:
       - DATABASE_URL=file:./dev.db
       - SESSION_SECRET=${SESSION_SECRET:-super-secret-session-key-change-in-production}
       - REQUIRE_LOGIN=${REQUIRE_LOGIN:-false}
+      - PORT=${PORT:-3000}
     networks:
       - app-net
 
@@ -21,6 +22,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - APP_PORT=${PORT:-3000}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data

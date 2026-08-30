@@ -4,5 +4,5 @@
 
 # Replace localhost with your domain in production (e.g., contabilidad.tudominio.com)
 localhost {
-    reverse_proxy app:3000
+    reverse_proxy app:{$APP_PORT:3000}
 }
