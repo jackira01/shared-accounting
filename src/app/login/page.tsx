@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { hasAnyUsers } from "@/lib/data";
 import { LoginForm } from "./login-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage({
   searchParams,
 }: {

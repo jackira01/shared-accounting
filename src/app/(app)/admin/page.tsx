@@ -3,6 +3,8 @@ import { getCurrentMembership, getAllMemberships } from "@/lib/data";
 import { UsersManager } from "./users-manager";
 import { BackupPanel } from "./backup-panel";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   const membership = await getCurrentMembership();
   if (!membership || membership.role !== "admin") redirect("/");

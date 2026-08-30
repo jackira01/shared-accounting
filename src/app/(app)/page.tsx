@@ -30,6 +30,8 @@ function toIncomes(incomes: Ledger["incomes"]): IncomeRecord[] {
   }));
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const [user, ledger, currency] = await Promise.all([
     getCurrentUser(),

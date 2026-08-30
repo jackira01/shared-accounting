@@ -96,8 +96,14 @@ export const getCurrentGroupId = cache(async (): Promise<string> => {
 });
 
 export const hasAnyUsers = cache(async (): Promise<boolean> => {
-  const count = await prisma.user.count();
-  return count > 0;
+  try {
+    const count = await prisma.user.count();
+    return count > 0;
+  } catch {
+    // La tabla/BD puede no existir durante el build (p. ej. en Docker limpio).
+    // Se trata como "sin usuarios" para no romper la compilación.
+    return false;
+  }
 });
 
 export type MembershipInfo = {
