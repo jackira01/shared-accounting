@@ -1,0 +1,30 @@
+version: "3.8"
+
+# Extensión opcional para despliegues manuales en un VPS sin PaaS.
+# Añade un proxy inverso Caddy (HTTP/HTTPS) delante de la app.
+#
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# En plataformas PaaS (Dokploy, Coolify, etc.) que ya proveen su propio
+# proxy inverso, usa únicamente el `docker-compose.yml` principal.
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - APP_PORT=${PORT:-3000}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:
+  caddy_config:

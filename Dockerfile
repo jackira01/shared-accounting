@@ -38,7 +38,13 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+
+# Full dependencies (includes the Prisma CLI used by the entrypoint for migrations)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
+# Entrypoint that applies pending migrations before starting the app
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 USER nextjs
 
@@ -47,4 +53,5 @@ ENV HOSTNAME="0.0.0.0"
 
 EXPOSE ${PORT}
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["node", "server.js"]
