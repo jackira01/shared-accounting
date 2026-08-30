@@ -96,12 +96,29 @@ export type MembershipInfo = {
 
 export const getCurrentMembership = cache(async (): Promise<MembershipInfo | null> => {
   const sessionId = await getSessionUserId();
-  if (!sessionId) return null;
-  return prisma.groupMember.findFirst({
-    where: { userId: sessionId },
+  if (sessionId) {
+    return prisma.groupMember.findFirst({
+      where: { userId: sessionId },
+      orderBy: { joinedAt: "asc" },
+      select: { role: true, status: true, groupId: true },
+    });
+  }
+
+  // Sin login (REQUIRE_LOGIN != true): actúa como el administrador del grupo.
+  if (process.env.REQUIRE_LOGIN === "true") return null;
+
+  const admin = await prisma.groupMember.findFirst({
+    where: { role: "admin" },
     orderBy: { joinedAt: "asc" },
     select: { role: true, status: true, groupId: true },
   });
+  if (admin) return admin;
+
+  const any = await prisma.groupMember.findFirst({
+    orderBy: { joinedAt: "asc" },
+    select: { role: true, status: true, groupId: true },
+  });
+  return any;
 });
 
 export type GroupConfig = {
