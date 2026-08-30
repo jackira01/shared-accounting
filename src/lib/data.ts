@@ -95,6 +95,11 @@ export const getCurrentGroupId = cache(async (): Promise<string> => {
   return membership.groupId;
 });
 
+export const hasAnyUsers = cache(async (): Promise<boolean> => {
+  const count = await prisma.user.count();
+  return count > 0;
+});
+
 export type MembershipInfo = {
   role: string;
   status: string;

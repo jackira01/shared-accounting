@@ -5,7 +5,10 @@ import {
   getCurrentMembership,
   getGroupConfig,
   hasDemoData,
+  hasAnyUsers,
 } from "@/lib/data";
+import { getSessionUserId } from "@/lib/dal";
+import { deleteSession } from "@/lib/session";
 import { Nav } from "@/components/nav";
 import { DemoBanner } from "@/components/demo-banner";
 
@@ -14,15 +17,28 @@ export default async function AppLayout({
 }: {
   children: ReactNode;
 }) {
-  const [user, membership, config] = await Promise.all([
-    getCurrentUser(),
-    getCurrentMembership(),
-    getGroupConfig(),
-  ]);
+  if (!(await hasAnyUsers())) {
+    redirect("/registro");
+  }
+
+  const membership = await getCurrentMembership();
+  const sessionId = await getSessionUserId();
+
+  // Sesión obsoleta: la cookie apunta a un usuario que ya no existe
+  // (p. ej. tras restaurar un respaldo). Se limpia y se redirige al login.
+  if (sessionId && !membership) {
+    await deleteSession();
+    redirect("/login");
+  }
 
   if (membership && membership.status === "PENDING") {
     redirect("/esperando");
   }
+
+  const [user, config] = await Promise.all([
+    getCurrentUser(),
+    getGroupConfig(),
+  ]);
 
   if (user.mustChangePassword) {
     redirect("/cambiar-password");

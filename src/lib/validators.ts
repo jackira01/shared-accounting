@@ -79,11 +79,17 @@ export const passwordInputSchema = z.object({
   newPassword: z.string().min(6, { message: "Mínimo 6 caracteres" }),
 });
 
-export const registerInputSchema = z.object({
-  name: z.string().min(1, { message: "Nombre requerido" }),
-  email: z.string().email({ message: "Email inválido" }),
-  password: z.string().min(6, { message: "Mínimo 6 caracteres" }),
-});
+export const registerInputSchema = z
+  .object({
+    name: z.string().min(1, { message: "Nombre requerido" }),
+    email: z.string().email({ message: "Email inválido" }),
+    password: z.string().min(6, { message: "Mínimo 6 caracteres" }),
+    confirmPassword: z.string().min(1, { message: "Confirma tu contraseña" }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  });
 
 export const setupInputSchema = z.object({
   currency: z.string().min(1),
