@@ -24,6 +24,10 @@ export default async function AppLayout({
     redirect("/esperando");
   }
 
+  if (user.mustChangePassword) {
+    redirect("/cambiar-password");
+  }
+
   if (membership && membership.role === "admin" && !config.configured) {
     redirect("/setup");
   }

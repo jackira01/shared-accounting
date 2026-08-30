@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  color        String   @default("#2563eb")
-  isDemo       Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id                String   @id @default(cuid())
+  name              String
+  email             String   @unique
+  passwordHash      String
+  color             String   @default("#2563eb")
+  isDemo            Boolean  @default(false)
+  mustChangePassword Boolean @default(false)
+  createdAt         DateTime @default(now())
 
   memberships         GroupMember[]
   lineAllocations     LineAllocation[]

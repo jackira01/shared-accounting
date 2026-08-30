@@ -70,7 +70,7 @@ export async function login(
 
   recordSuccess(`login:${email}`);
   await createSession(user.id);
-  redirect("/");
+  redirect(user.mustChangePassword ? "/cambiar-password" : "/");
 }
 
 export async function register(input: RegisterInput): Promise<AuthState> {
@@ -154,4 +154,28 @@ export async function changePassword(
   await prisma.user.update({ where: { id: userId }, data: { passwordHash: hash } });
 
   return { message: "Contraseña actualizada" };
+}
+
+/**
+ * Cambia la contraseña sin exigir la actual (flujo de contraseña temporal).
+ * Se usa en /cambiar-password tras un reset forzado.
+ */
+export async function setNewPassword(
+  _prevState: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const userId = await requireUserId();
+  const newPassword = String(formData.get("newPassword") ?? "");
+
+  if (newPassword.length < 6) {
+    return { error: "La nueva contraseña debe tener al menos 6 caracteres" };
+  }
+
+  const hash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: hash, mustChangePassword: false },
+  });
+
+  redirect("/");
 }

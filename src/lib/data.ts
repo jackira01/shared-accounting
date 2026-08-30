@@ -10,6 +10,7 @@ export type MemberDTO = {
   name: string;
   color: string;
   email: string;
+  mustChangePassword: boolean;
 };
 
 export type CategoryDTO = {
@@ -75,7 +76,13 @@ export const getCurrentUser = cache(async (): Promise<MemberDTO> => {
   const userId = await requireUserId();
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("Usuario no encontrado");
-  return { id: user.id, name: user.name, email: user.email, color: user.color };
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    color: user.color,
+    mustChangePassword: user.mustChangePassword,
+  };
 });
 
 export const getCurrentGroupId = cache(async (): Promise<string> => {
@@ -203,6 +210,7 @@ export const getMembers = cache(async (): Promise<MemberDTO[]> => {
     name: m.user.name,
     email: m.user.email,
     color: m.user.color,
+    mustChangePassword: m.user.mustChangePassword,
   }));
 });
 
