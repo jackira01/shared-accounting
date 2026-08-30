@@ -111,6 +111,25 @@ Esto agrega Caddy (puertos `80`/`443`) y expone la app detrás de tu dominio. Re
 - En `/admin` (solo admin): **Exportar** descarga un `.json` con todas las tablas; **Importar** sube ese `.json`, valida su estructura con Zod y **reemplaza** todos los datos.
 - Útil para respaldos y migraciones entre entornos. El archivo incluye los hashes de contraseñas y los datos de ejemplo.
 
+## Recuperación de contraseña
+
+| Caso | Cómo se resuelve |
+|------|------------------|
+| Un **usuario** olvida su clave | El admin la resetea en `/admin` → "Resetear clave" (asigna una temporal). |
+| Un **admin** olvida su clave y hay otro admin | El otro admin la resetea igual desde `/admin`. |
+| El **único admin** olvida su clave | Script CLI desde el servidor (ver abajo). |
+
+- Tras un reset, el usuario **debe cambiar su contraseña** en el siguiente inicio de sesión.
+- Reset de un usuario desde `/admin`: panel **Admin** → "Resetear clave" → escribe la contraseña temporal → "Guardar".
+- Reset por CLI (bloqueo del admin, requiere acceso al servidor):
+  ```bash
+  # local
+  npm run reset:password -- jack@casa.local nueva-clave
+
+  # docker
+  docker compose exec app npm run reset:password -- jack@casa.local nueva-clave
+  ```
+
 ## Details
 
 | Área | Decisión |
