@@ -8,9 +8,9 @@ import {
   hasAnyUsers,
 } from "@/lib/data";
 import { getSessionUserId } from "@/lib/dal";
-import { deleteSession } from "@/lib/session";
 import { Nav } from "@/components/nav";
 import { DemoBanner } from "@/components/demo-banner";
+import { ForceLogout } from "@/components/force-logout";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +27,9 @@ export default async function AppLayout({
   const sessionId = await getSessionUserId();
 
   // Sesión obsoleta: la cookie apunta a un usuario que ya no existe
-  // (p. ej. tras restaurar un respaldo). Se limpia y se redirige al login.
+  // (p. ej. tras restaurar un respaldo). Se limpia vía Server Action.
   if (sessionId && !membership) {
-    await deleteSession();
-    redirect("/login");
+    return <ForceLogout />;
   }
 
   if (membership && membership.status === "PENDING") {
