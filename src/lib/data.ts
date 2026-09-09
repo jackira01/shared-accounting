@@ -38,6 +38,7 @@ export type InvoiceLineDTO = {
 export type InvoiceDTO = {
   id: string;
   date: Date;
+  createdAt: Date;
   vendor: string | null;
   notes: string | null;
   paidById: string;
@@ -314,6 +315,7 @@ export const getInvoice = cache(
 function toInvoiceDTO(invoice: {
   id: string;
   date: Date;
+  createdAt: Date;
   vendor: string | null;
   notes: string | null;
   paidById: string;
@@ -333,6 +335,7 @@ function toInvoiceDTO(invoice: {
   return {
     id: invoice.id,
     date: invoice.date,
+    createdAt: invoice.createdAt,
     vendor: invoice.vendor,
     notes: invoice.notes,
     paidById: invoice.paidById,

@@ -2,13 +2,18 @@ import Link from "next/link";
 import { getInvoices, getCurrency } from "@/lib/data";
 import { deleteInvoice } from "@/app/actions/invoices";
 import { formatMoney, formatDate } from "@/lib/format";
-import { Card, Button, Input, Badge } from "@/components/ui";
+import { Card, Button, Input, Select, Badge } from "@/components/ui";
 import { DeleteButton } from "@/components/delete-button";
 
 export default async function FacturasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; from?: string; to?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    from?: string;
+    to?: string;
+    sort?: string;
+  }>;
 }) {
   const params = await searchParams;
   const [invoices, currency] = await Promise.all([getInvoices(), getCurrency()]);
@@ -16,6 +21,12 @@ export default async function FacturasPage({
   const q = params.q?.trim().toLowerCase() ?? "";
   const from = params.from ? new Date(`${params.from}T00:00:00`) : null;
   const to = params.to ? new Date(`${params.to}T23:59:59`) : null;
+  const sort =
+    params.sort === "date-asc" ||
+    params.sort === "created-desc" ||
+    params.sort === "created-asc"
+      ? params.sort
+      : "date-desc";
 
   const filtered = invoices.filter((inv) => {
     if (from && inv.date < from) return false;
@@ -33,6 +44,12 @@ export default async function FacturasPage({
     return true;
   });
 
+  const sorted = [...filtered].sort((a, b) => {
+    const field = sort.startsWith("created") ? "createdAt" : "date";
+    const direction = sort.endsWith("asc") ? 1 : -1;
+    return (a[field].getTime() - b[field].getTime()) * direction;
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -43,7 +60,7 @@ export default async function FacturasPage({
       </div>
 
       <Card>
-        <form className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+        <form className="grid gap-3 sm:grid-cols-[1fr_auto_auto_auto_auto] sm:items-end">
           <div>
             <Input
               name="q"
@@ -57,6 +74,14 @@ export default async function FacturasPage({
           <div>
             <Input name="to" type="date" defaultValue={params.to ?? ""} />
           </div>
+          <div>
+            <Select name="sort" defaultValue={sort} aria-label="Ordenar facturas">
+              <option value="date-desc">Fecha factura, más recientes</option>
+              <option value="date-asc">Fecha factura, más antiguas</option>
+              <option value="created-desc">Creación, más recientes</option>
+              <option value="created-asc">Creación, más antiguas</option>
+            </Select>
+          </div>
           <Button type="submit" variant="secondary">
             Filtrar
           </Button>
@@ -69,7 +94,7 @@ export default async function FacturasPage({
         </Card>
       ) : (
         <ul className="space-y-2">
-          {filtered.map((inv) => (
+          {sorted.map((inv) => (
             <li
               key={inv.id}
               className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm"
@@ -83,7 +108,7 @@ export default async function FacturasPage({
                     {inv.vendor || "Factura"}
                   </p>
                   <p className="text-sm text-zinc-500">
-                    {formatDate(inv.date)} · {inv.lines.length} producto
+                    Factura: {formatDate(inv.date)} · Creada: {formatDate(inv.createdAt)} · {inv.lines.length} producto
                     {inv.lines.length !== 1 ? "s" : ""}
                   </p>
                 </Link>
